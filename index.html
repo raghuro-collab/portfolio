@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raghu M — Video Editor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --gold: #C9A84C;
+  --dark: #0A0A0A;
+  --dark2: #111111;
+  --dark3: #1A1A1A;
+  --muted: #666660;
+  --text: #E8E4D8;
+  --text-dim: #9A9690;
+  --pad: clamp(1.25rem, 5vw, 4rem);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--dark);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 300;
+  overflow-x: hidden;
+}
+
+/* noise */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 999; opacity: 0.4;
+}
+
+/* cursor — desktop only */
+.cursor, .cursor-ring { display: none; }
+@media (pointer: fine) {
+  .cursor {
+    display: block; width: 8px; height: 8px;
+    background: var(--gold); border-radius: 50%;
+    position: fixed; pointer-events: none; z-index: 9999;
+    mix-blend-mode: difference;
+  }
+  .cursor-ring {
+    display: block; width: 36px; height: 36px;
+    border: 1px solid var(--gold); border-radius: 50%;
+    position: fixed; pointer-events: none; z-index: 9998;
+    transition: transform 0.15s ease, opacity 0.15s ease; opacity: 0.5;
+  }
+}
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  padding: 1.5rem var(--pad);
+  display: flex; justify-content: space-between; align-items: center;
+  background: linear-gradient(to bottom, rgba(10,10,10,0.97) 0%, transparent 100%);
+}
+.nav-logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.4rem; font-weight: 300; letter-spacing: 0.1em;
+  color: var(--text); text-decoration: none;
+}
+.nav-logo span { color: var(--gold); }
+.nav-links { display: flex; gap: 2rem; list-style: none; }
+.nav-links a {
+  color: var(--text-dim); text-decoration: none;
+  font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase;
+  transition: color 0.3s;
+}
+.nav-links a:hover { color: var(--gold); }
+@media (max-width: 600px) { .nav-links { display: none; } }
+
+/* ── HERO ── */
+.hero {
+  min-height: 100svh;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 0 var(--pad) clamp(3rem, 8vw, 6rem);
+  position: relative; overflow: hidden;
+}
+.hero-bg {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse at 70% 30%, rgba(201,168,76,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse at 20% 80%, rgba(201,168,76,0.04) 0%, transparent 50%);
+}
+.hero-line {
+  position: absolute; top: 0; right: 14%; width: 1px; height: 100%;
+  background: linear-gradient(to bottom, transparent, rgba(201,168,76,0.3) 40%, rgba(201,168,76,0.5) 65%, transparent);
+}
+.hero-eyebrow {
+  font-size: 0.68rem; letter-spacing: 0.35em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 1.25rem;
+  display: flex; align-items: center; gap: 1rem;
+  opacity: 0; animation: fadeUp 0.8s 0.3s forwards;
+}
+.hero-eyebrow::before {
+  content: ''; display: block; width: 2.5rem; height: 1px; background: var(--gold);
+}
+.hero-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(3.8rem, 11vw, 9rem);
+  font-weight: 300; line-height: 0.92; letter-spacing: -0.02em;
+  margin-bottom: 2rem;
+  opacity: 0; animation: fadeUp 0.9s 0.5s forwards;
+}
+.hero-title em { font-style: italic; color: var(--gold); }
+.hero-title .outline {
+  -webkit-text-stroke: 1px rgba(232,212,138,0.4); color: transparent;
+}
+.hero-sub {
+  max-width: 360px; font-size: clamp(0.82rem, 2vw, 0.92rem);
+  line-height: 1.85; color: var(--text-dim); letter-spacing: 0.02em;
+  opacity: 0; animation: fadeUp 0.9s 0.7s forwards;
+}
+.hero-scroll {
+  position: absolute; right: var(--pad); bottom: clamp(3rem, 6vw, 6rem);
+  writing-mode: vertical-rl; font-size: 0.62rem; letter-spacing: 0.3em;
+  text-transform: uppercase; color: var(--text-dim);
+  display: flex; align-items: center; gap: 0.8rem;
+  opacity: 0; animation: fadeUp 1s 1s forwards;
+}
+.hero-scroll::after {
+  content: ''; display: block; width: 1px; height: 3.5rem;
+  background: linear-gradient(to bottom, var(--gold), transparent);
+  animation: scrollLine 2s 1.5s infinite;
+}
+@media (max-width: 600px) { .hero-scroll { display: none; } }
+
+/* ── SHARED SECTION ── */
+section { padding: clamp(4rem, 8vw, 7rem) var(--pad); }
+.section-label {
+  font-size: 0.63rem; letter-spacing: 0.35em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 0.9rem;
+  display: flex; align-items: center; gap: 1rem;
+}
+.section-label::before {
+  content: ''; display: block; width: 2rem; height: 1px; background: var(--gold);
+}
+.section-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(2.2rem, 5vw, 4.5rem);
+  font-weight: 300; line-height: 1.05; letter-spacing: -0.01em; margin-bottom: 2.5rem;
+}
+.section-title em { font-style: italic; color: var(--gold); }
+.divider {
+  height: 1px; margin: 0 var(--pad);
+  background: linear-gradient(to right, transparent, rgba(201,168,76,0.3), transparent);
+}
+
+/* ── ABOUT ── */
+.about-text { max-width: 720px; }
+.about-text p {
+  font-size: clamp(0.88rem, 2vw, 1rem);
+  line-height: 1.9; color: var(--text-dim); margin-bottom: 1.4rem;
+}
+.about-text p strong { color: var(--text); font-weight: 500; }
+
+/* ── SKILLS ── */
+.skills-section { background: var(--dark2); }
+.skills-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1px; background: rgba(201,168,76,0.08);
+  border: 1px solid rgba(201,168,76,0.08); max-width: 960px;
+}
+.skill-item { background: var(--dark2); padding: 1.75rem 1.5rem; transition: background 0.3s; }
+.skill-item:hover { background: var(--dark3); }
+.skill-icon { font-size: 1.4rem; margin-bottom: 0.9rem; color: var(--gold); display: block; }
+.skill-name { font-size: 0.85rem; font-weight: 500; color: var(--text); letter-spacing: 0.05em; display: block; margin-bottom: 0.35rem; }
+.skill-desc { font-size: 0.73rem; color: var(--text-dim); line-height: 1.6; }
+
+/* ── WORK / BEFORE-AFTER ── */
+.work-intro { margin-bottom: 3rem; }
+
+/* side-by-side on desktop, stacked on mobile */
+.work-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem;
+  max-width: 960px;
+  align-items: start;
+}
+@media (max-width: 700px) {
+  .work-grid { grid-template-columns: 1fr; gap: 2.5rem; }
+}
+
+.work-card {
+  background: var(--dark3);
+  border: 1px solid rgba(201,168,76,0.1);
+  overflow: hidden;
+  transition: border-color 0.4s;
+}
+.work-card:hover { border-color: rgba(201,168,76,0.32); }
+
+.work-card-top {
+  padding: 1.25rem 1.25rem 0;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.work-number {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1rem; color: var(--text-dim); font-weight: 300; letter-spacing: 0.05em;
+}
+
+/* toggle */
+.ba-toggle {
+  display: flex; margin: 1rem 1.25rem 0;
+}
+.ba-btn {
+  flex: 1; padding: 0.55rem 0;
+  background: none; border: 1px solid rgba(201,168,76,0.18);
+  color: var(--text-dim); font-size: 0.68rem; letter-spacing: 0.2em;
+  text-transform: uppercase; cursor: pointer; transition: all 0.25s;
+  font-family: 'DM Sans', sans-serif;
+}
+.ba-btn.active {
+  background: var(--gold); color: var(--dark); border-color: var(--gold); font-weight: 500;
+}
+
+/* 9:16 video container — the key fix */
+.reel-wrap {
+  margin: 1rem 1.25rem 0;
+  /* constrain height so it doesn't blow up on desktop */
+  max-height: min(72vh, 520px);
+  /* enforce 9:16 by limiting width based on max-height */
+  width: 100%;
+  position: relative;
+}
+.reel-wrap video {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: min(72vh, 520px);
+  aspect-ratio: 9 / 16;
+  object-fit: cover;
+  background: #000;
+}
+
+/* on desktop: center the reel and cap its width so it looks like a phone screen */
+@media (min-width: 701px) {
+  .reel-wrap {
+    /* max-width derived from max-height * (9/16) */
+    max-width: calc(min(72vh, 520px) * 9 / 16);
+    margin-left: auto; margin-right: auto;
+  }
+}
+
+.work-info {
+  padding: 1rem 1.25rem 1.5rem;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.work-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.2rem; font-weight: 400; color: var(--text);
+}
+.work-state {
+  font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--gold); padding: 0.2rem 0.6rem;
+  border: 1px solid rgba(201,168,76,0.3);
+}
+
+/* ── SERVICES ── */
+.services-list { max-width: 860px; }
+.service-row {
+  display: grid; grid-template-columns: 3rem 1fr auto;
+  align-items: center; gap: 1.5rem;
+  padding: 1.75rem 0; border-bottom: 1px solid rgba(201,168,76,0.08);
+  transition: all 0.3s;
+}
+.service-row:first-child { border-top: 1px solid rgba(201,168,76,0.08); }
+.service-row:hover .service-name { color: var(--gold); }
+.service-num {
+  font-family: 'Cormorant Garamond', serif; font-size: 1rem;
+  color: var(--text-dim); font-weight: 300;
+}
+.service-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(1.3rem, 3vw, 1.7rem); font-weight: 300; letter-spacing: -0.01em;
+  transition: color 0.3s;
+}
+.service-desc {
+  font-size: 0.73rem; color: var(--text-dim); letter-spacing: 0.05em; text-align: right;
+}
+@media (max-width: 500px) {
+  .service-row { grid-template-columns: 2rem 1fr; }
+  .service-desc { display: none; }
+}
+
+/* ── CONTACT ── */
+.contact-section { background: var(--dark2); text-align: center; }
+.contact-section .section-label { justify-content: center; }
+.contact-section .section-label::before { display: none; }
+.contact-big {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(2.6rem, 8vw, 7rem);
+  font-weight: 300; line-height: 1.02; letter-spacing: -0.02em; margin-bottom: 2.5rem;
+}
+.contact-big em { font-style: italic; color: var(--gold); }
+.contact-links {
+  display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;
+}
+.contact-link {
+  display: flex; align-items: center; gap: 0.65rem;
+  color: var(--text-dim); text-decoration: none;
+  font-size: clamp(0.72rem, 2vw, 0.82rem); letter-spacing: 0.08em;
+  border: 1px solid rgba(201,168,76,0.18);
+  padding: 0.9rem 1.5rem; transition: all 0.3s;
+}
+.contact-link:hover {
+  color: var(--gold); border-color: var(--gold);
+  background: rgba(201,168,76,0.04);
+}
+
+/* ── FOOTER ── */
+footer {
+  padding: 2rem var(--pad);
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;
+  border-top: 1px solid rgba(201,168,76,0.08);
+}
+.footer-logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1rem; font-weight: 300; letter-spacing: 0.1em; color: var(--text-dim);
+}
+.footer-copy { font-size: 0.68rem; color: var(--muted); letter-spacing: 0.08em; }
+@media (max-width: 500px) { footer { justify-content: center; text-align: center; } }
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes scrollLine {
+  0%   { transform: scaleY(0); transform-origin: top; }
+  50%  { transform: scaleY(1); transform-origin: top; }
+  51%  { transform: scaleY(1); transform-origin: bottom; }
+  100% { transform: scaleY(0); transform-origin: bottom; }
+}
+.reveal { opacity: 0; transform: translateY(36px); transition: opacity 0.75s ease, transform 0.75s ease; }
+.reveal.visible { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">R<span>.</span>M</a>
+  <ul class="nav-links">
+    <li><a href="#about">About</a></li>
+    <li><a href="#work">Work</a></li>
+    <li><a href="#services">Services</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="home">
+  <div class="hero-bg"></div>
+  <div class="hero-line"></div>
+  <p class="hero-eyebrow">Short Form Video Editor</p>
+  <h1 class="hero-title">
+    Raghu<br>
+    <em>M.</em>
+    <span class="outline"> Frames</span>
+  </h1>
+  <p class="hero-sub">Crafting visual stories that stop the scroll. Turning raw footage into cinematic moments — one cut at a time.</p>
+  <span class="hero-scroll">Scroll</span>
+</section>
+
+<div class="divider"></div>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="about-text reveal">
+    <p class="section-label">About Me</p>
+    <h2 class="section-title">The artist<br><em>behind the cut</em></h2>
+    <p>Hi, I'm <strong>Raghu M</strong> — a short form video editor based in Karnataka, India. I specialise in transforming raw, unpolished footage into scroll-stopping content that resonates with audiences and drives real engagement.</p>
+    <p>With a deep understanding of <strong>visual rhythm, pacing, and storytelling</strong>, I work across Instagram Reels, YouTube Shorts, and TikTok — bringing a cinematic sensibility to every project, no matter how brief the format.</p>
+    <p>Whether it's a brand campaign, a travel vlog, or a personal highlight reel — I approach every edit with the same level of <strong>precision and creative intention</strong>.</p>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- SKILLS -->
+<section class="skills-section" id="skills">
+  <div class="reveal">
+    <p class="section-label">Expertise</p>
+    <h2 class="section-title">Tools &amp; <em>skills</em></h2>
+  </div>
+  <div class="skills-grid reveal">
+    <div class="skill-item">
+      <span class="skill-icon">✦</span>
+      <span class="skill-name">Premiere Pro</span>
+      <span class="skill-desc">Precision timeline editing, multi-cam workflows &amp; colour grade</span>
+    </div>
+    <div class="skill-item">
+      <span class="skill-icon">◈</span>
+      <span class="skill-name">After Effects</span>
+      <span class="skill-desc">Motion graphics, kinetic text &amp; seamless transitions</span>
+    </div>
+    <div class="skill-item">
+      <span class="skill-icon">◇</span>
+      <span class="skill-name">Sound Design</span>
+      <span class="skill-desc">Beat-synced edits, SFX layering &amp; audio mastering</span>
+    </div>
+    <div class="skill-item">
+      <span class="skill-icon">△</span>
+      <span class="skill-name">Colour Grading</span>
+      <span class="skill-desc">Custom LUTs, cinematic palettes &amp; brand-consistent tones</span>
+    </div>
+    <div class="skill-item">
+      <span class="skill-icon">○</span>
+      <span class="skill-name">Storytelling</span>
+      <span class="skill-desc">Hook-first structure built for maximum retention</span>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- WORK -->
+<section id="work">
+  <div class="work-intro reveal">
+    <p class="section-label">Portfolio</p>
+    <h2 class="section-title">Before &amp; <em>After</em></h2>
+  </div>
+
+  <div class="work-grid reveal">
+
+    <!-- PROJECT 1 -->
+    <div class="work-card">
+      <div class="work-card-top">
+        <span class="work-number">01</span>
+      </div>
+      <div class="ba-toggle">
+        <button class="ba-btn active" onclick="switchVideo(this,'bef01.mp4',1,'Before')">Before</button>
+        <button class="ba-btn"        onclick="switchVideo(this,'aft01.mp4',1,'After')">After</button>
+      </div>
+      <div class="reel-wrap">
+        <video id="video1" controls playsinline>
+          <source src="bef01.mp4" type="video/mp4">
+        </video>
+      </div>
+      <div class="work-info">
+        <span class="work-title">Work 01</span>
+        <span class="work-state" id="label1">Before</span>
+      </div>
+    </div>
+
+    <!-- PROJECT 2 -->
+    <div class="work-card">
+      <div class="work-card-top">
+        <span class="work-number">02</span>
+      </div>
+      <div class="ba-toggle">
+        <button class="ba-btn active" onclick="switchVideo(this,'bef02.mp4',2,'Before')">Before</button>
+        <button class="ba-btn"        onclick="switchVideo(this,'aft02.mp4',2,'After')">After</button>
+      </div>
+      <div class="reel-wrap">
+        <video id="video2" controls playsinline>
+          <source src="bef02.mp4" type="video/mp4">
+        </video>
+      </div>
+      <div class="work-info">
+        <span class="work-title">Work 02</span>
+        <span class="work-state" id="label2">Before</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- SERVICES -->
+<section id="services">
+  <div class="reveal">
+    <p class="section-label">What I Offer</p>
+    <h2 class="section-title">Services</h2>
+  </div>
+  <div class="services-list reveal">
+    <div class="service-row">
+      <span class="service-num">01</span>
+      <span class="service-name">Short Form Editing</span>
+      <span class="service-desc">Reels · Shorts · TikTok</span>
+    </div>
+    <div class="service-row">
+      <span class="service-num">02</span>
+      <span class="service-name">Colour Grading</span>
+      <span class="service-desc">Cinematic · Brand Tones</span>
+    </div>
+    <div class="service-row">
+      <span class="service-num">03</span>
+      <span class="service-name">Motion Graphics</span>
+      <span class="service-desc">Titles · Transitions · Overlays</span>
+    </div>
+    <div class="service-row">
+      <span class="service-num">04</span>
+      <span class="service-name">Sound Design</span>
+      <span class="service-desc">Beat Sync · SFX · Mastering</span>
+    </div>
+    <div class="service-row">
+      <span class="service-num">05</span>
+      <span class="service-name">Content Strategy</span>
+      <span class="service-desc">Hook · Structure · Retention</span>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- CONTACT -->
+<section class="contact-section" id="contact">
+  <p class="section-label reveal">Get In Touch</p>
+  <h2 class="contact-big reveal">Let's create<br><em>something</em> great</h2>
+  <div class="contact-links reveal">
+    <a href="mailto:raghu.ro.2008@gmail.com" class="contact-link">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 8l10 6 10-6"/>
+      </svg>
+      raghu.ro.2008@gmail.com
+    </a>
+    <a href="https://instagram.com/rora" target="_blank" class="contact-link">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="2" y="2" width="20" height="20" rx="5"/>
+        <circle cx="12" cy="12" r="4"/>
+        <circle cx="17.5" cy="6.5" r="0.8" fill="currentColor"/>
+      </svg>
+      @rora
+    </a>
+    <a href="https://wa.me/918498012008" target="_blank" class="contact-link">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M3 20l1.4-4.2A8.5 8.5 0 1 1 12 20.5a8.4 8.4 0 0 1-4.1-1.1L3 20z"/>
+      </svg>
+      +91 84980 12008
+    </a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <span class="footer-logo">Raghu M.</span>
+  <span class="footer-copy">© 2025 · Short Form Video Editor · Karnataka, India</span>
+</footer>
+
+<script>
+  /* cursor */
+  const cursor = document.getElementById('cursor');
+  const ring   = document.getElementById('cursorRing');
+  let mx=0,my=0,rx=0,ry=0;
+  if (cursor) {
+    document.addEventListener('mousemove', e => {
+      mx = e.clientX; my = e.clientY;
+      cursor.style.left = mx-4+'px'; cursor.style.top = my-4+'px';
+    });
+    (function tick(){
+      rx += (mx-rx-18)*0.12; ry += (my-ry-18)*0.12;
+      ring.style.left = rx+'px'; ring.style.top = ry+'px';
+      requestAnimationFrame(tick);
+    })();
+    document.querySelectorAll('a,button,.work-card').forEach(el=>{
+      el.addEventListener('mouseenter',()=>{ ring.style.transform='scale(2)'; ring.style.opacity='0.28'; });
+      el.addEventListener('mouseleave',()=>{ ring.style.transform='scale(1)'; ring.style.opacity='0.5'; });
+    });
+  }
+
+  /* scroll reveal */
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.reveal').forEach(r => obs.observe(r));
+
+  /* before/after switch */
+  function switchVideo(btn, src, id, label) {
+    btn.closest('.work-card').querySelectorAll('.ba-btn')
+       .forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const vid = document.getElementById('video'+id);
+    vid.pause();
+    vid.src = src;
+    vid.load();
+    document.getElementById('label'+id).textContent = label;
+  }
+</script>
+</body>
+</html>
